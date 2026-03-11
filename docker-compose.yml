@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: box-tracking-rabbitmq
+    ports:
+      - "5672:5672"      # RabbitMQ
+      - "15672:15672"    # Management UI
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - box-tracking-network
+
+  api:
+    build:
+      context: ./src/BoxTracking.Api
+      dockerfile: Dockerfile
+    container_name: box-tracking-api
+    ports:
+      - "5000:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8080
+      - RabbitMQ__Host=rabbitmq
+      - RabbitMQ__Port=5672
+      - RabbitMQ__Username=guest
+      - RabbitMQ__Password=guest
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - box-tracking-network
+
+  processor:
+    build:
+      context: ./src/BoxTracking.EventProcessor
+      dockerfile: Dockerfile
+    container_name: box-tracking-processor
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - RabbitMQ__Host=rabbitmq
+      - RabbitMQ__Port=5672
+      - RabbitMQ__Username=guest
+      - RabbitMQ__Password=guest
+      - SignalR__HubUrl=http://dashboard:8080/hubs/dashboard
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - box-tracking-network
+
+  dashboard:
+    build:
+      context: ./src/BoxTracking.Dashboard
+      dockerfile: Dockerfile
+    container_name: box-tracking-dashboard
+    ports:
+      - "5001:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8080
+    networks:
+      - box-tracking-network
+
+networks:
+  box-tracking-network:
+    driver: bridge

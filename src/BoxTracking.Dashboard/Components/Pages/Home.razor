@@ -1,0 +1,134 @@
+@page "/"
+@using System.Timers
+@implements IDisposable
+
+<PageTitle>Box Tracking Dashboard</PageTitle>
+
+<div class="container mt-4">
+    <h1>📦 Box Tracking Dashboard</h1>
+    <p class="text-muted">Real-time worker tracking system (Prototype)</p>
+
+    <div class="row mt-4">
+        <div class="col-md-3">
+            <div class="card text-white bg-success mb-3">
+                <div class="card-header">Boxes Cleaned</div>
+                <div class="card-body">
+                    <h2 class="card-title">@boxesCleaned</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card text-white bg-warning mb-3">
+                <div class="card-header">Boxes Repaired</div>
+                <div class="card-body">
+                    <h2 class="card-title">@boxesRepaired</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card text-white bg-primary mb-3">
+                <div class="card-header">Boxes Loaded</div>
+                <div class="card-body">
+                    <h2 class="card-title">@boxesLoaded</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card text-white bg-info mb-3">
+                <div class="card-header">In Progress</div>
+                <div class="card-body">
+                    <h2 class="card-title">@boxesInProgress</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (loadingAttemptsFailed > 0)
+    {
+        <div class="alert alert-danger" role="alert">
+            ⚠️ <strong>@loadingAttemptsFailed</strong> loading attempts failed (uncleaned boxes blocked)
+        </div>
+    }
+
+    <div class="card mt-4">
+        <div class="card-header">
+            <h5>Recent Events</h5>
+        </div>
+        <div class="card-body">
+            <p class="text-muted">Showing simulated data for prototype</p>
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Box ID</th>
+                        <th>Event</th>
+                        <th>Worker</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>@DateTime.Now.ToString("HH:mm:ss")</td>
+                        <td>BOX-001</td>
+                        <td><span class="badge bg-success">Cleaning Completed</span></td>
+                        <td>Worker-01</td>
+                    </tr>
+                    <tr>
+                        <td>@DateTime.Now.AddMinutes(-1).ToString("HH:mm:ss")</td>
+                        <td>BOX-002</td>
+                        <td><span class="badge bg-warning">Repair Started</span></td>
+                        <td>Worker-03</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="mt-4">
+        <p class="text-muted">
+            <small>Last updated: @lastUpdated.ToString("HH:mm:ss")</small>
+            <br />
+            <small>Dashboard updates every 5 seconds (polling)</small>
+            <br />
+            <small class="text-info">Note: This is a prototype. Real-time SignalR updates coming in production version.</small>
+        </p>
+    </div>
+</div>
+
+@code {
+    private int boxesCleaned = 0;
+    private int boxesRepaired = 0;
+    private int boxesLoaded = 0;
+    private int boxesInProgress = 0;
+    private int loadingAttemptsFailed = 0;
+    private DateTime lastUpdated = DateTime.Now;
+    private System.Timers.Timer? updateTimer;
+
+    protected override void OnInitialized()
+    {
+        // Simulate updates for prototype
+        updateTimer = new System.Timers.Timer(5000); // Update every 5 seconds
+        updateTimer.Elapsed += OnTimerElapsed;
+        updateTimer.Start();
+    }
+
+    private void OnTimerElapsed(object? sender, ElapsedEventArgs e)
+    {
+        // Simulate increasing metrics
+        boxesCleaned++;
+        if (boxesCleaned % 3 == 0) boxesRepaired++;
+        if (boxesCleaned % 5 == 0) boxesLoaded++;
+        boxesInProgress = Random.Shared.Next(2, 6);
+        lastUpdated = DateTime.Now;
+
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        updateTimer?.Stop();
+        updateTimer?.Dispose();
+    }
+}
