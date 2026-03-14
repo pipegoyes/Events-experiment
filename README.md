@@ -18,11 +18,13 @@ Dashboard (Blazor Server)
 
 ## 🚀 Quick Start
 
-### Prerequisites
+### Option 1: Local Development with Docker Compose
+
+**Prerequisites:**
 - Docker & Docker Compose
 - (Optional) .NET 8 SDK for local development
 
-### Run with Docker Compose
+**Run with Docker Compose:**
 
 ```bash
 # Start all services
@@ -39,6 +41,32 @@ docker-compose up -d --build
 - **API**: http://localhost:5000
 - **API Swagger**: http://localhost:5000/swagger
 - **RabbitMQ Management**: http://localhost:15672 (guest/guest)
+
+### Option 2: Deploy to Azure ☁️
+
+**Deploy to Azure Container Apps with one command:**
+
+```bash
+cd terraform
+cp terraform.tfvars.example terraform.tfvars
+# Edit terraform.tfvars and set a unique acr_name
+./deploy.sh
+```
+
+**What you get:**
+- ✅ Production-ready infrastructure on Azure
+- ✅ Automatic HTTPS with custom domains
+- ✅ Auto-scaling based on load
+- ✅ Centralized logging and monitoring
+- ✅ ~€20-40/month (free tier available)
+
+**Full documentation:** [terraform/README.md](terraform/README.md)
+
+**Cleanup:**
+```bash
+cd terraform
+./destroy.sh
+```
 
 ## 📡 API Usage
 

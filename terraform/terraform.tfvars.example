@@ -1,0 +1,18 @@
+# Copy this file to terraform.tfvars and customize
+
+# Resource Group
+resource_group_name = "rg-boxtracking"
+
+# Azure Region - choose one:
+# "westeurope", "northeurope", "eastus", "westus2", "germanywestcentral"
+location = "westeurope"
+
+# Environment name
+environment = "Development"
+
+# Prefix for resource names (3-10 lowercase alphanumeric)
+prefix = "boxtrack"
+
+# Azure Container Registry name (must be globally unique!)
+# Change this to something unique to you
+acr_name = "boxtrackingacr123"  # Change "123" to random numbers
