@@ -1,0 +1,21 @@
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS test
+
+WORKDIR /app
+
+# Copy solution structure
+COPY src/BoxTracking.Shared/*.csproj ./src/BoxTracking.Shared/
+COPY src/BoxTracking.Api/*.csproj ./src/BoxTracking.Api/
+COPY tests/BoxTracking.IntegrationTests/*.csproj ./tests/BoxTracking.IntegrationTests/
+
+# Restore dependencies
+WORKDIR /app/tests/BoxTracking.IntegrationTests
+RUN dotnet restore
+
+# Copy source code
+WORKDIR /app
+COPY src/ ./src/
+COPY tests/ ./tests/
+
+# Run tests
+WORKDIR /app/tests/BoxTracking.IntegrationTests
+ENTRYPOINT ["dotnet", "test", "--no-restore", "--verbosity", "normal"]

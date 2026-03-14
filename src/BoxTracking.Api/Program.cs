@@ -22,13 +22,25 @@ builder.Services.AddCors(options =>
 builder.Services.AddSingleton<IConnection>(sp =>
 {
     var config = sp.GetRequiredService<IConfiguration>();
-    var factory = new ConnectionFactory
+    
+    // Support connection string (for tests) or individual settings
+    var connectionString = config["RabbitMQ:ConnectionString"];
+    ConnectionFactory factory;
+    
+    if (!string.IsNullOrEmpty(connectionString))
     {
-        HostName = config["RabbitMQ:Host"] ?? "localhost",
-        Port = int.Parse(config["RabbitMQ:Port"] ?? "5672"),
-        UserName = config["RabbitMQ:Username"] ?? "guest",
-        Password = config["RabbitMQ:Password"] ?? "guest"
-    };
+        factory = new ConnectionFactory { Uri = new Uri(connectionString) };
+    }
+    else
+    {
+        factory = new ConnectionFactory
+        {
+            HostName = config["RabbitMQ:Host"] ?? "localhost",
+            Port = int.Parse(config["RabbitMQ:Port"] ?? "5672"),
+            UserName = config["RabbitMQ:Username"] ?? "guest",
+            Password = config["RabbitMQ:Password"] ?? "guest"
+        };
+    }
     
     // Retry connection
     var maxRetries = 10;
@@ -127,3 +139,6 @@ Console.WriteLine("Box Tracking API started");
 Console.WriteLine($"RabbitMQ Host: {builder.Configuration["RabbitMQ:Host"]}");
 
 app.Run();
+
+// Make Program accessible for WebApplicationFactory in tests
+public partial class Program { }
