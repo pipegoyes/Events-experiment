@@ -8,8 +8,8 @@ using Sentry;
 
 var builder = Host.CreateApplicationBuilder(args);
 
-// Add Sentry
-builder.Services.AddSentry(options =>
+// Add Sentry (for Worker Services, use logging extension)
+builder.Logging.AddSentry(options =>
 {
     options.Dsn = builder.Configuration["Sentry:Dsn"];
     options.Environment = builder.Environment.EnvironmentName;
@@ -17,8 +17,6 @@ builder.Services.AddSentry(options =>
     options.SendDefaultPii = false;
     options.Release = $"boxtracking-processor@{builder.Configuration["Version"] ?? "1.0.0"}";
 });
-
-builder.Logging.AddSentry();
 
 // Add RabbitMQ connection
 builder.Services.AddSingleton<IConnection>(sp =>

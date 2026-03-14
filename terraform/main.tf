@@ -22,40 +22,17 @@ resource "azurerm_resource_group" "main" {
   }
 }
 
-# Container Registry
-resource "azurerm_container_registry" "acr" {
+# Container Registry (using existing from flight tracker)
+data "azurerm_container_registry" "acr" {
   name                = var.acr_name
-  resource_group_name = azurerm_resource_group.main.name
-  location            = azurerm_resource_group.main.location
-  sku                 = "Basic"
-  admin_enabled       = true
-
-  tags = {
-    Environment = var.environment
-    Project     = "BoxTracking"
-  }
+  resource_group_name = "flight-tracker-rg"
 }
 
-# Log Analytics Workspace (required for Container Apps)
-resource "azurerm_log_analytics_workspace" "main" {
-  name                = "${var.prefix}-logs"
-  resource_group_name = azurerm_resource_group.main.name
-  location            = azurerm_resource_group.main.location
-  sku                 = "PerGB2018"
-  retention_in_days   = 30
-
-  tags = {
-    Environment = var.environment
-    Project     = "BoxTracking"
-  }
-}
-
-# Container Apps Environment
+# Container Apps Environment (without Log Analytics - using Sentry instead)
 resource "azurerm_container_app_environment" "main" {
-  name                       = "${var.prefix}-env"
-  resource_group_name        = azurerm_resource_group.main.name
-  location                   = azurerm_resource_group.main.location
-  log_analytics_workspace_id = azurerm_log_analytics_workspace.main.id
+  name                = "${var.prefix}-env"
+  resource_group_name = azurerm_resource_group.main.name
+  location            = azurerm_resource_group.main.location
 
   tags = {
     Environment = var.environment
@@ -117,7 +94,7 @@ resource "azurerm_container_app" "api" {
   template {
     container {
       name   = "api"
-      image  = "${azurerm_container_registry.acr.login_server}/boxtracking-api:latest"
+      image  = "${data.azurerm_container_registry.acr.login_server}/boxtracking-api:latest"
       cpu    = 0.5
       memory = "1Gi"
 
@@ -157,14 +134,14 @@ resource "azurerm_container_app" "api" {
   }
 
   registry {
-    server               = azurerm_container_registry.acr.login_server
-    username             = azurerm_container_registry.acr.admin_username
+    server               = data.azurerm_container_registry.acr.login_server
+    username             = data.azurerm_container_registry.acr.admin_username
     password_secret_name = "registry-password"
   }
 
   secret {
     name  = "registry-password"
-    value = azurerm_container_registry.acr.admin_password
+    value = data.azurerm_container_registry.acr.admin_password
   }
 
   ingress {
@@ -194,7 +171,7 @@ resource "azurerm_container_app" "processor" {
   template {
     container {
       name   = "processor"
-      image  = "${azurerm_container_registry.acr.login_server}/boxtracking-processor:latest"
+      image  = "${data.azurerm_container_registry.acr.login_server}/boxtracking-processor:latest"
       cpu    = 0.5
       memory = "1Gi"
 
@@ -239,14 +216,14 @@ resource "azurerm_container_app" "processor" {
   }
 
   registry {
-    server               = azurerm_container_registry.acr.login_server
-    username             = azurerm_container_registry.acr.admin_username
+    server               = data.azurerm_container_registry.acr.login_server
+    username             = data.azurerm_container_registry.acr.admin_username
     password_secret_name = "registry-password"
   }
 
   secret {
     name  = "registry-password"
-    value = azurerm_container_registry.acr.admin_password
+    value = data.azurerm_container_registry.acr.admin_password
   }
 
   tags = {
@@ -267,7 +244,7 @@ resource "azurerm_container_app" "dashboard" {
   template {
     container {
       name   = "dashboard"
-      image  = "${azurerm_container_registry.acr.login_server}/boxtracking-dashboard:latest"
+      image  = "${data.azurerm_container_registry.acr.login_server}/boxtracking-dashboard:latest"
       cpu    = 0.5
       memory = "1Gi"
 
@@ -287,14 +264,14 @@ resource "azurerm_container_app" "dashboard" {
   }
 
   registry {
-    server               = azurerm_container_registry.acr.login_server
-    username             = azurerm_container_registry.acr.admin_username
+    server               = data.azurerm_container_registry.acr.login_server
+    username             = data.azurerm_container_registry.acr.admin_username
     password_secret_name = "registry-password"
   }
 
   secret {
     name  = "registry-password"
-    value = azurerm_container_registry.acr.admin_password
+    value = data.azurerm_container_registry.acr.admin_password
   }
 
   ingress {
@@ -322,7 +299,7 @@ resource "azurerm_container_app" "simulator" {
   template {
     container {
       name   = "simulator"
-      image  = "${azurerm_container_registry.acr.login_server}/boxtracking-simulator:latest"
+      image  = "${data.azurerm_container_registry.acr.login_server}/boxtracking-simulator:latest"
       cpu    = 0.5
       memory = "1Gi"
 
@@ -347,14 +324,14 @@ resource "azurerm_container_app" "simulator" {
   }
 
   registry {
-    server               = azurerm_container_registry.acr.login_server
-    username             = azurerm_container_registry.acr.admin_username
+    server               = data.azurerm_container_registry.acr.login_server
+    username             = data.azurerm_container_registry.acr.admin_username
     password_secret_name = "registry-password"
   }
 
   secret {
     name  = "registry-password"
-    value = azurerm_container_registry.acr.admin_password
+    value = data.azurerm_container_registry.acr.admin_password
   }
 
   ingress {

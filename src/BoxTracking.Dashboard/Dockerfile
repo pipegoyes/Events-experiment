@@ -2,15 +2,15 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
 # Copy shared project
-COPY ../BoxTracking.Shared/BoxTracking.Shared.csproj BoxTracking.Shared/
-COPY ../BoxTracking.Shared/ BoxTracking.Shared/
+COPY src/BoxTracking.Shared/BoxTracking.Shared.csproj BoxTracking.Shared/
+COPY src/BoxTracking.Shared/ BoxTracking.Shared/
 
 # Copy dashboard project
-COPY BoxTracking.Dashboard.csproj .
-RUN dotnet restore
+COPY src/BoxTracking.Dashboard/BoxTracking.Dashboard.csproj BoxTracking.Dashboard/
+RUN dotnet restore BoxTracking.Dashboard/BoxTracking.Dashboard.csproj
 
-COPY . .
-RUN dotnet publish -c Release -o /app/publish
+COPY src/BoxTracking.Dashboard/ BoxTracking.Dashboard/
+RUN dotnet publish BoxTracking.Dashboard/BoxTracking.Dashboard.csproj -c Release -o /app/publish
 
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
