@@ -43,3 +43,6 @@ artifacts/
 # Logs
 logs/
 *.log
+
+# Environment variables (contains Sentry DSN)
+.env
