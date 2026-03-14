@@ -145,6 +145,11 @@ resource "azurerm_container_app" "api" {
         name  = "RabbitMQ__Password"
         value = "guest"
       }
+
+      env {
+        name  = "Sentry__Dsn"
+        value = var.sentry_dsn
+      }
     }
 
     min_replicas = 1
@@ -222,6 +227,11 @@ resource "azurerm_container_app" "processor" {
         name  = "SignalR__HubUrl"
         value = "http://${azurerm_container_app.dashboard.name}/hubs/dashboard"
       }
+
+      env {
+        name  = "Sentry__Dsn"
+        value = var.sentry_dsn
+      }
     }
 
     min_replicas = 1
@@ -264,6 +274,11 @@ resource "azurerm_container_app" "dashboard" {
       env {
         name  = "ASPNETCORE_ENVIRONMENT"
         value = var.environment
+      }
+
+      env {
+        name  = "Sentry__Dsn"
+        value = var.sentry_dsn
       }
     }
 
@@ -319,6 +334,11 @@ resource "azurerm_container_app" "simulator" {
       env {
         name  = "BoxTrackingApi__BaseUrl"
         value = "https://${azurerm_container_app.api.ingress[0].fqdn}"
+      }
+
+      env {
+        name  = "Sentry__Dsn"
+        value = var.sentry_dsn
       }
     }
 

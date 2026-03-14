@@ -5,6 +5,16 @@ using RabbitMQ.Client;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Add Sentry
+builder.WebHost.UseSentry(options =>
+{
+    options.Dsn = builder.Configuration["Sentry:Dsn"];
+    options.Environment = builder.Environment.EnvironmentName;
+    options.TracesSampleRate = 1.0;
+    options.SendDefaultPii = false;
+    options.Release = $"boxtracking-api@{builder.Configuration["Version"] ?? "1.0.0"}";
+});
+
 // Add services
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();

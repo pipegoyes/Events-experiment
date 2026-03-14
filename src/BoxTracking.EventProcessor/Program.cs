@@ -4,8 +4,21 @@ using BoxTracking.Shared.Events;
 using BoxTracking.Shared.Models;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
+using Sentry;
 
 var builder = Host.CreateApplicationBuilder(args);
+
+// Add Sentry
+builder.Services.AddSentry(options =>
+{
+    options.Dsn = builder.Configuration["Sentry:Dsn"];
+    options.Environment = builder.Environment.EnvironmentName;
+    options.TracesSampleRate = 1.0;
+    options.SendDefaultPii = false;
+    options.Release = $"boxtracking-processor@{builder.Configuration["Version"] ?? "1.0.0"}";
+});
+
+builder.Logging.AddSentry();
 
 // Add RabbitMQ connection
 builder.Services.AddSingleton<IConnection>(sp =>

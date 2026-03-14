@@ -37,3 +37,10 @@ variable "acr_name" {
     error_message = "ACR name must be 5-50 lowercase alphanumeric characters."
   }
 }
+
+variable "sentry_dsn" {
+  description = "Sentry DSN for error tracking (leave empty to disable)"
+  type        = string
+  default     = ""
+  sensitive   = true
+}

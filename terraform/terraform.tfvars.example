@@ -16,3 +16,7 @@ prefix = "boxtrack"
 # Azure Container Registry name (must be globally unique!)
 # Change this to something unique to you
 acr_name = "boxtrackingacr123"  # Change "123" to random numbers
+
+# Sentry DSN for error tracking (optional - leave empty to disable)
+# Get your DSN from: https://sentry.io/settings/projects/your-project/keys/
+sentry_dsn = ""  # Example: "https://examplePublicKey@o0.ingest.sentry.io/0"
