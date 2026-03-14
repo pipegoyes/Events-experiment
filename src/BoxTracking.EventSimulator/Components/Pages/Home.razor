@@ -1,0 +1,238 @@
+@page "/"
+@using BoxTracking.EventSimulator.Services
+@using BoxTracking.Shared.Events
+@inject EventService EventService
+
+<PageTitle>Box Tracking Event Simulator</PageTitle>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>🎯 Send Single Event</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Box ID</label>
+                    <input @bind="boxId" class="form-control" placeholder="BOX-001" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Worker ID</label>
+                    <input @bind="workerId" class="form-control" placeholder="WORKER-01" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Event Type</label>
+                    <select @bind="selectedEventType" class="form-select">
+                        <option value="BoxCleaningStarted">Box Cleaning Started</option>
+                        <option value="BoxCleaningCompleted">Box Cleaning Completed</option>
+                        <option value="BoxRepairStarted">Box Repair Started</option>
+                        <option value="BoxRepairCompleted">Box Repair Completed</option>
+                        <option value="BoxLoadingAttempted">Box Loading Attempted</option>
+                    </select>
+                </div>
+                <button @onclick="SendSingleEvent" class="btn btn-primary" disabled="@isSending">
+                    @if (isSending)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2"></span>
+                    }
+                    Send Event
+                </button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h5>🔄 Simulate Box Lifecycle</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Box ID</label>
+                    <input @bind="lifecycleBoxId" class="form-control" placeholder="BOX-001" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Worker ID</label>
+                    <input @bind="lifecycleWorkerId" class="form-control" placeholder="WORKER-01" />
+                </div>
+                <button @onclick="SimulateLifecycle" class="btn btn-success" disabled="@isSending">
+                    @if (isSending)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2"></span>
+                    }
+                    Simulate Lifecycle
+                </button>
+                <p class="text-muted mt-2 small">
+                    Sends: Cleaning Started → Cleaning Completed → Loading Attempted
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>🔀 Send Random Events</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Number of Events</label>
+                    <input @bind="batchCount" type="number" class="form-control" min="1" max="100" />
+                </div>
+                <button @onclick="SendRandomBatch" class="btn btn-warning" disabled="@isSending">
+                    @if (isSending)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2"></span>
+                    }
+                    Send Random Batch
+                </button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h5>📊 Event Log</h5>
+            </div>
+            <div class="card-body">
+                @if (sentEvents.Count == 0)
+                {
+                    <p class="text-muted">No events sent yet</p>
+                }
+                else
+                {
+                    <div class="mb-2">
+                        <strong>Total sent:</strong> @sentEvents.Count
+                        <button @onclick="ClearLog" class="btn btn-sm btn-outline-secondary float-end">Clear</button>
+                    </div>
+                    <div style="max-height: 400px; overflow-y: auto;">
+                        @foreach (var evt in sentEvents.OrderByDescending(e => e.Timestamp).Take(20))
+                        {
+                            <div class="alert alert-success alert-sm py-2 mb-2">
+                                <small>
+                                    <strong>@evt.EventType</strong><br />
+                                    Box: @evt.BoxId | Worker: @evt.WorkerId<br />
+                                    @evt.Timestamp.ToString("HH:mm:ss")
+                                </small>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (!string.IsNullOrEmpty(statusMessage))
+{
+    <div class="alert alert-@(statusIsError ? "danger" : "success") mt-3">
+        @statusMessage
+    </div>
+}
+
+@code {
+    private string boxId = "BOX-001";
+    private string workerId = "WORKER-01";
+    private string selectedEventType = "BoxCleaningCompleted";
+    
+    private string lifecycleBoxId = "BOX-LIFECYCLE";
+    private string lifecycleWorkerId = "WORKER-01";
+    
+    private int batchCount = 10;
+    
+    private bool isSending = false;
+    private string statusMessage = "";
+    private bool statusIsError = false;
+    
+    private List<BoxEvent> sentEvents = new();
+
+    private async Task SendSingleEvent()
+    {
+        isSending = true;
+        statusMessage = "";
+        
+        try
+        {
+            var evt = new BoxEvent
+            {
+                EventId = Guid.NewGuid().ToString(),
+                BoxId = boxId,
+                WorkerId = workerId,
+                EventType = selectedEventType,
+                Timestamp = DateTime.UtcNow
+            };
+
+            var success = await EventService.SendEventAsync(evt);
+            
+            if (success)
+            {
+                sentEvents.Add(evt);
+                statusMessage = $"✅ Event sent successfully: {selectedEventType}";
+                statusIsError = false;
+            }
+            else
+            {
+                statusMessage = "❌ Failed to send event";
+                statusIsError = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            statusMessage = $"❌ Error: {ex.Message}";
+            statusIsError = true;
+        }
+        finally
+        {
+            isSending = false;
+        }
+    }
+
+    private async Task SimulateLifecycle()
+    {
+        isSending = true;
+        statusMessage = "";
+        
+        try
+        {
+            var events = await EventService.SimulateBoxLifecycleAsync(lifecycleBoxId, lifecycleWorkerId);
+            sentEvents.AddRange(events);
+            statusMessage = $"✅ Simulated complete lifecycle for {lifecycleBoxId} ({events.Count} events)";
+            statusIsError = false;
+        }
+        catch (Exception ex)
+        {
+            statusMessage = $"❌ Error: {ex.Message}";
+            statusIsError = true;
+        }
+        finally
+        {
+            isSending = false;
+        }
+    }
+
+    private async Task SendRandomBatch()
+    {
+        isSending = true;
+        statusMessage = "";
+        
+        try
+        {
+            var events = await EventService.GenerateAndSendBatchAsync(batchCount);
+            sentEvents.AddRange(events);
+            statusMessage = $"✅ Sent {events.Count} random events";
+            statusIsError = false;
+        }
+        catch (Exception ex)
+        {
+            statusMessage = $"❌ Error: {ex.Message}";
+            statusIsError = true;
+        }
+        finally
+        {
+            isSending = false;
+        }
+    }
+
+    private void ClearLog()
+    {
+        sentEvents.Clear();
+        statusMessage = "";
+    }
+}

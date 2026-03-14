@@ -69,6 +69,22 @@ services:
     networks:
       - box-tracking-network
 
+  simulator:
+    build:
+      context: .
+      dockerfile: src/BoxTracking.EventSimulator/Dockerfile
+    container_name: box-tracking-simulator
+    ports:
+      - "5002:5001"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:5001
+      - BoxTrackingApi__BaseUrl=http://api:8080
+    depends_on:
+      - api
+    networks:
+      - box-tracking-network
+
 networks:
   box-tracking-network:
     driver: bridge

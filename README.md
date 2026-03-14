@@ -5,7 +5,7 @@ Real-time event-driven system for tracking box operations (cleaning, repairing, 
 ## 🏗️ Architecture
 
 ```
-Mobile App (Future)
+Event Simulator (Blazor) / Mobile App (Future)
     ↓ HTTP POST
 API (ASP.NET Core)
     ↓ Publish
@@ -34,7 +34,8 @@ docker-compose up -d --build
 
 ### Access the Services
 
-- **Dashboard**: http://localhost:5001
+- **Event Simulator**: http://localhost:5002 (Generate test events with UI)
+- **Dashboard**: http://localhost:5001 (View metrics)
 - **API**: http://localhost:5000
 - **API Swagger**: http://localhost:5000/swagger
 - **RabbitMQ Management**: http://localhost:15672 (guest/guest)
@@ -94,16 +95,30 @@ curl -X POST http://localhost:5000/api/events \
 
 ## 🧪 Testing the Flow
 
+### Option 1: Using the Event Simulator (Easiest)
+
 1. **Start all services:**
    ```bash
    docker-compose up --build
    ```
 
-2. **Open Dashboard:**
-   - Go to http://localhost:5001
-   - Watch the metrics update
+2. **Open Event Simulator:**
+   - Go to http://localhost:5002
+   - Click "Simulate Lifecycle" to send a complete workflow
+   - Or send individual events manually
 
-3. **Send test events:**
+3. **Open Dashboard:**
+   - Go to http://localhost:5001
+   - Watch the metrics update in real-time
+
+### Option 2: Using cURL
+
+1. **Start all services:**
+   ```bash
+   docker-compose up --build
+   ```
+
+2. **Send test events:**
    ```bash
    # Clean a box
    curl -X POST http://localhost:5000/api/events \
@@ -116,7 +131,7 @@ curl -X POST http://localhost:5000/api/events \
      -d '{"boxId": "BOX-001", "workerId": "WORKER-02", "eventType": "BoxLoadingAttempted"}'
    ```
 
-4. **Check RabbitMQ:**
+3. **Check RabbitMQ:**
    - Open http://localhost:15672
    - Login: guest/guest
    - Go to "Queues" tab
@@ -137,9 +152,15 @@ box-tracking-prototype/
 │   ├── BoxTracking.EventProcessor/   # Consumes from RabbitMQ
 │   │   ├── Program.cs
 │   │   └── Dockerfile
-│   └── BoxTracking.Dashboard/        # Blazor Server UI
+│   ├── BoxTracking.Dashboard/        # Blazor Server UI (metrics)
+│   │   ├── Components/Pages/Home.razor
+│   │   └── Dockerfile
+│   └── BoxTracking.EventSimulator/   # Blazor Server UI (test events)
 │       ├── Components/Pages/Home.razor
+│       ├── Services/EventService.cs
 │       └── Dockerfile
+├── tests/
+│   └── BoxTracking.IntegrationTests/ # Integration tests with Testcontainers
 └── README.md
 ```
 
