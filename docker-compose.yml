@@ -20,8 +20,8 @@ services:
 
   api:
     build:
-      context: ./src/BoxTracking.Api
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: src/BoxTracking.Api/Dockerfile
     container_name: box-tracking-api
     ports:
       - "5000:8080"
@@ -41,8 +41,8 @@ services:
 
   processor:
     build:
-      context: ./src/BoxTracking.EventProcessor
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: src/BoxTracking.EventProcessor/Dockerfile
     container_name: box-tracking-processor
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
@@ -60,8 +60,8 @@ services:
 
   dashboard:
     build:
-      context: ./src/BoxTracking.Dashboard
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: src/BoxTracking.Dashboard/Dockerfile
     container_name: box-tracking-dashboard
     ports:
       - "5001:8080"
