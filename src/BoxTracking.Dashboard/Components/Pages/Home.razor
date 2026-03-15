@@ -1,9 +1,9 @@
 @page "/"
-@using Microsoft.AspNetCore.SignalR.Client
 @using BoxTracking.Shared.Events
 @using BoxTracking.Shared.Models
-@implements IAsyncDisposable
-@inject NavigationManager NavigationManager
+@using BoxTracking.Dashboard.Services
+@implements IDisposable
+@inject EventBroadcastService BroadcastService
 
 <PageTitle>Box Tracking Dashboard</PageTitle>
 
@@ -11,18 +11,9 @@
     <h1>📦 Box Tracking Dashboard</h1>
     <p class="text-muted">Real-time worker tracking system</p>
 
-    @if (!isConnected)
-    {
-        <div class="alert alert-warning" role="alert">
-            ⚠️ Connecting to real-time updates...
-        </div>
-    }
-    else
-    {
-        <div class="alert alert-success" role="alert">
-            ✅ Connected - Showing real-time events
-        </div>
-    }
+    <div class="alert alert-success" role="alert">
+        ✅ Connected - Showing real-time events from EventProcessor
+    </div>
 
     <div class="row mt-4">
         <div class="col-md-3">
@@ -111,88 +102,34 @@
                 Last updated: @metrics.LastUpdated.ToLocalTime().ToString("HH:mm:ss")
             </small>
             <br />
-            <small>
-                Connection status: 
-                @if (isConnected)
-                {
-                    <span class="text-success">● Connected</span>
-                }
-                else
-                {
-                    <span class="text-danger">● Disconnected</span>
-                }
+            <small class="text-success">
+                ● Connected to event stream
             </small>
         </p>
     </div>
 </div>
 
 @code {
-    private HubConnection? hubConnection;
     private DailyMetrics metrics = new();
     private List<RecentEvent> recentEvents = new();
-    private bool isConnected = false;
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
-        // Connect to SignalR hub
-        hubConnection = new HubConnectionBuilder()
-            .WithUrl(NavigationManager.ToAbsoluteUri("/hubs/dashboard"))
-            .WithAutomaticReconnect()
-            .Build();
+        // Subscribe to events from the broadcast service
+        BroadcastService.OnEventReceived += HandleEventReceived;
+        
+        // Load current state
+        metrics = BroadcastService.GetMetrics();
+        recentEvents = BroadcastService.GetRecentEvents();
+    }
 
-        // Handle reconnection
-        hubConnection.Reconnecting += error =>
-        {
-            isConnected = false;
-            StateHasChanged();
-            return Task.CompletedTask;
-        };
-
-        hubConnection.Reconnected += connectionId =>
-        {
-            isConnected = true;
-            StateHasChanged();
-            return Task.CompletedTask;
-        };
-
-        hubConnection.Closed += error =>
-        {
-            isConnected = false;
-            StateHasChanged();
-            return Task.CompletedTask;
-        };
-
-        // Listen for events from EventProcessor
-        hubConnection.On<BoxEvent, DailyMetrics>("ReceiveEvent", (evt, updatedMetrics) =>
-        {
-            metrics = updatedMetrics;
-            
-            // Add event to recent list
-            recentEvents.Insert(0, new RecentEvent
-            {
-                EventId = evt.EventId,
-                BoxId = evt.BoxId,
-                EventType = evt.EventType,
-                WorkerId = evt.WorkerId,
-                Timestamp = evt.Timestamp
-            });
-
-            // Keep only last 20 events
-            if (recentEvents.Count > 20)
-                recentEvents.RemoveAt(recentEvents.Count - 1);
-
-            InvokeAsync(StateHasChanged);
-        });
-
-        // Listen for metrics updates
-        hubConnection.On<DailyMetrics>("ReceiveMetrics", (updatedMetrics) =>
-        {
-            metrics = updatedMetrics;
-            InvokeAsync(StateHasChanged);
-        });
-
-        await hubConnection.StartAsync();
-        isConnected = true;
+    private void HandleEventReceived(BoxEvent evt, DailyMetrics updatedMetrics)
+    {
+        metrics = updatedMetrics;
+        recentEvents = BroadcastService.GetRecentEvents();
+        
+        // Trigger UI update
+        InvokeAsync(StateHasChanged);
     }
 
     private MarkupString GetEventBadge(string eventType)
@@ -210,11 +147,8 @@
         return new MarkupString($"<span class=\"badge {badgeClass}\">{text}</span>");
     }
 
-    public async ValueTask DisposeAsync()
+    public void Dispose()
     {
-        if (hubConnection is not null)
-        {
-            await hubConnection.DisposeAsync();
-        }
+        BroadcastService.OnEventReceived -= HandleEventReceived;
     }
 }

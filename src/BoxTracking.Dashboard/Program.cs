@@ -1,5 +1,6 @@
 using BoxTracking.Dashboard.Components;
 using BoxTracking.Dashboard.Hubs;
+using BoxTracking.Dashboard.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,6 +19,9 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 builder.Services.AddSignalR();
+
+// Add event broadcast service (singleton to share state across all pages)
+builder.Services.AddSingleton<EventBroadcastService>();
 
 var app = builder.Build();
 
