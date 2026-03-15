@@ -1,4 +1,5 @@
 using BoxTracking.Dashboard.Components;
+using BoxTracking.Dashboard.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -33,5 +34,8 @@ app.UseAntiforgery();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
+app.MapHub<DashboardHub>("/hubs/dashboard");
+
 Console.WriteLine("Box Tracking Dashboard started");
+Console.WriteLine("SignalR Hub available at: /hubs/dashboard");
 app.Run();

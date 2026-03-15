@@ -5,6 +5,7 @@ using BoxTracking.Shared.Models;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using Sentry;
+using Microsoft.AspNetCore.SignalR.Client;
 
 var builder = Host.CreateApplicationBuilder(args);
 
@@ -138,21 +139,42 @@ public class EventProcessorService : BackgroundService
     private readonly IConnection _connection;
     private readonly MetricsService _metrics;
     private readonly ILogger<EventProcessorService> _logger;
+    private readonly IConfiguration _configuration;
     private IModel? _channel;
+    private HubConnection? _hubConnection;
 
     public EventProcessorService(
         IConnection connection,
         MetricsService metrics,
-        ILogger<EventProcessorService> logger)
+        ILogger<EventProcessorService> logger,
+        IConfiguration configuration)
     {
         _connection = connection;
         _metrics = metrics;
         _logger = logger;
+        _configuration = configuration;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation("Event Processor started");
+
+        // Connect to SignalR Dashboard Hub
+        var hubUrl = _configuration["SignalR:HubUrl"] ?? "http://dashboard:8080/hubs/dashboard";
+        _hubConnection = new HubConnectionBuilder()
+            .WithUrl(hubUrl)
+            .WithAutomaticReconnect()
+            .Build();
+
+        try
+        {
+            await _hubConnection.StartAsync(stoppingToken);
+            _logger.LogInformation("Connected to Dashboard Hub at {HubUrl}", hubUrl);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to connect to Dashboard Hub. Events will be processed but not displayed.");
+        }
 
         _channel = _connection.CreateModel();
         _channel.QueueDeclare(
@@ -195,7 +217,18 @@ public class EventProcessorService : BackgroundService
                     _metrics.ProcessEvent(evt);
                     _logger.LogInformation("Processed event: {EventType} for box {BoxId}", evt.EventType, evt.BoxId);
                     
-                    // TODO: Broadcast to SignalR dashboard
+                    // Broadcast to SignalR dashboard
+                    if (_hubConnection?.State == HubConnectionState.Connected)
+                    {
+                        try
+                        {
+                            await _hubConnection.SendAsync("BroadcastEvent", evt, _metrics.GetMetrics());
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(ex, "Failed to broadcast event to dashboard");
+                        }
+                    }
                 }
 
                 _channel.BasicAck(ea.DeliveryTag, false);
@@ -217,9 +250,20 @@ public class EventProcessorService : BackgroundService
         await Task.Delay(Timeout.Infinite, stoppingToken);
     }
 
+    public override async ValueTask DisposeAsync()
+    {
+        _channel?.Close();
+        if (_hubConnection != null)
+        {
+            await _hubConnection.DisposeAsync();
+        }
+        await base.DisposeAsync();
+    }
+
     public override void Dispose()
     {
         _channel?.Close();
+        _hubConnection?.DisposeAsync().AsTask().Wait();
         base.Dispose();
     }
 }

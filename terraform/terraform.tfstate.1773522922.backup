@@ -1,0 +1,146 @@
+{
+  "version": 4,
+  "terraform_version": "1.7.5",
+  "serial": 11,
+  "lineage": "f8e18814-4044-02da-f2ed-46fd6f6b383e",
+  "outputs": {
+    "api_url": {
+      "value": null,
+      "type": "string"
+    },
+    "container_apps_environment_id": {
+      "value": "/subscriptions/7acf9440-8dbc-4642-9e37-da6b6fcd12b1/resourceGroups/rg-boxtracking/providers/Microsoft.App/managedEnvironments/boxtrack-env",
+      "type": "string"
+    },
+    "container_registry_login_server": {
+      "value": "flighttrackeracr6ebcf3aa.azurecr.io",
+      "type": "string"
+    },
+    "container_registry_password": {
+      "value": "97kse8IkjrDm40J0WsZ2PX7sciR8alnPCa27XOJ2kx9C4uPbWJi2JQQJ99CBAC5RqLJEqg7NAAACAZCRkVmP",
+      "type": "string",
+      "sensitive": true
+    },
+    "container_registry_username": {
+      "value": "flighttrackeracr6ebcf3aa",
+      "type": "string",
+      "sensitive": true
+    },
+    "dashboard_url": {
+      "value": null,
+      "type": "string"
+    },
+    "resource_group_name": {
+      "value": "rg-boxtracking",
+      "type": "string"
+    },
+    "simulator_url": {
+      "value": null,
+      "type": "string"
+    },
+    "swagger_url": {
+      "value": null,
+      "type": "string"
+    }
+  },
+  "resources": [
+    {
+      "mode": "data",
+      "type": "azurerm_container_registry",
+      "name": "acr",
+      "provider": "provider[\"registry.terraform.io/hashicorp/azurerm\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "admin_enabled": true,
+            "admin_password": "97kse8IkjrDm40J0WsZ2PX7sciR8alnPCa27XOJ2kx9C4uPbWJi2JQQJ99CBAC5RqLJEqg7NAAACAZCRkVmP",
+            "admin_username": "flighttrackeracr6ebcf3aa",
+            "data_endpoint_enabled": false,
+            "id": "/subscriptions/7acf9440-8dbc-4642-9e37-da6b6fcd12b1/resourceGroups/flight-tracker-rg/providers/Microsoft.ContainerRegistry/registries/flighttrackeracr6ebcf3aa",
+            "location": "westeurope",
+            "login_server": "flighttrackeracr6ebcf3aa.azurecr.io",
+            "name": "flighttrackeracr6ebcf3aa",
+            "resource_group_name": "flight-tracker-rg",
+            "sku": "Basic",
+            "tags": {
+              "Environment": "Production",
+              "ManagedBy": "Terraform",
+              "Owner": "Felipe",
+              "Project": "FlightTracker"
+            },
+            "timeouts": null
+          },
+          "sensitive_attributes": []
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "azurerm_log_analytics_workspace",
+      "name": "main",
+      "provider": "provider[\"registry.terraform.io/hashicorp/azurerm\"]",
+      "instances": [
+        {
+          "schema_version": 3,
+          "attributes": {
+            "allow_resource_only_permissions": true,
+            "cmk_for_query_forced": false,
+            "daily_quota_gb": -1,
+            "data_collection_rule_id": "",
+            "id": "/subscriptions/7acf9440-8dbc-4642-9e37-da6b6fcd12b1/resourceGroups/rg-boxtracking/providers/Microsoft.OperationalInsights/workspaces/boxtrack-logs",
+            "identity": [],
+            "immediate_data_purge_on_30_days_enabled": false,
+            "internet_ingestion_enabled": true,
+            "internet_query_enabled": true,
+            "local_authentication_disabled": false,
+            "location": "westeurope",
+            "name": "boxtrack-logs",
+            "primary_shared_key": "L6snx8ZCpY0rgj5hjLaLEgldjpeWwdZvVKkyxkKwas48SiYHnd8Wwif7oJ765Eux4aUBAHLVpiIa+rt1puvciA==",
+            "reservation_capacity_in_gb_per_day": null,
+            "resource_group_name": "rg-boxtracking",
+            "retention_in_days": 30,
+            "secondary_shared_key": "04p2GRbyjgJL1TJ7mcemAwC7mIQFMoLPt/Y2Z4ZczBQT0rDsIBPo6UKx7gUbR/b6P9Xg+ON/Et5RUoKZozyuxw==",
+            "sku": "PerGB2018",
+            "tags": {
+              "Environment": "Development",
+              "Project": "BoxTracking"
+            },
+            "timeouts": null,
+            "workspace_id": "c6ccf65e-71b3-44f9-a0aa-9e22a75008ac"
+          },
+          "sensitive_attributes": [],
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjoxODAwMDAwMDAwMDAwLCJkZWxldGUiOjE4MDAwMDAwMDAwMDAsInJlYWQiOjMwMDAwMDAwMDAwMCwidXBkYXRlIjoxODAwMDAwMDAwMDAwfSwic2NoZW1hX3ZlcnNpb24iOiIzIn0=",
+          "dependencies": [
+            "azurerm_resource_group.main"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "azurerm_resource_group",
+      "name": "main",
+      "provider": "provider[\"registry.terraform.io/hashicorp/azurerm\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "id": "/subscriptions/7acf9440-8dbc-4642-9e37-da6b6fcd12b1/resourceGroups/rg-boxtracking",
+            "location": "westeurope",
+            "managed_by": "",
+            "name": "rg-boxtracking",
+            "tags": {
+              "Environment": "Development",
+              "Project": "BoxTracking"
+            },
+            "timeouts": null
+          },
+          "sensitive_attributes": [],
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjo1NDAwMDAwMDAwMDAwLCJkZWxldGUiOjU0MDAwMDAwMDAwMDAsInJlYWQiOjMwMDAwMDAwMDAwMCwidXBkYXRlIjo1NDAwMDAwMDAwMDAwfX0="
+        }
+      ]
+    }
+  ],
+  "check_results": null
+}

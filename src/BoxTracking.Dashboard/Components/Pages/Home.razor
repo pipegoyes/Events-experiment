@@ -1,19 +1,35 @@
 @page "/"
-@using System.Timers
-@implements IDisposable
+@using Microsoft.AspNetCore.SignalR.Client
+@using BoxTracking.Shared.Events
+@using BoxTracking.Shared.Models
+@implements IAsyncDisposable
+@inject NavigationManager NavigationManager
 
 <PageTitle>Box Tracking Dashboard</PageTitle>
 
 <div class="container mt-4">
     <h1>📦 Box Tracking Dashboard</h1>
-    <p class="text-muted">Real-time worker tracking system (Prototype)</p>
+    <p class="text-muted">Real-time worker tracking system</p>
+
+    @if (!isConnected)
+    {
+        <div class="alert alert-warning" role="alert">
+            ⚠️ Connecting to real-time updates...
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-success" role="alert">
+            ✅ Connected - Showing real-time events
+        </div>
+    }
 
     <div class="row mt-4">
         <div class="col-md-3">
             <div class="card text-white bg-success mb-3">
                 <div class="card-header">Boxes Cleaned</div>
                 <div class="card-body">
-                    <h2 class="card-title">@boxesCleaned</h2>
+                    <h2 class="card-title">@metrics.BoxesCleaned</h2>
                 </div>
             </div>
         </div>
@@ -22,7 +38,7 @@
             <div class="card text-white bg-warning mb-3">
                 <div class="card-header">Boxes Repaired</div>
                 <div class="card-body">
-                    <h2 class="card-title">@boxesRepaired</h2>
+                    <h2 class="card-title">@metrics.BoxesRepaired</h2>
                 </div>
             </div>
         </div>
@@ -31,7 +47,7 @@
             <div class="card text-white bg-primary mb-3">
                 <div class="card-header">Boxes Loaded</div>
                 <div class="card-body">
-                    <h2 class="card-title">@boxesLoaded</h2>
+                    <h2 class="card-title">@metrics.BoxesLoaded</h2>
                 </div>
             </div>
         </div>
@@ -40,16 +56,16 @@
             <div class="card text-white bg-info mb-3">
                 <div class="card-header">In Progress</div>
                 <div class="card-body">
-                    <h2 class="card-title">@boxesInProgress</h2>
+                    <h2 class="card-title">@metrics.BoxesInProgress</h2>
                 </div>
             </div>
         </div>
     </div>
 
-    @if (loadingAttemptsFailed > 0)
+    @if (metrics.LoadingAttemptsFailed > 0)
     {
         <div class="alert alert-danger" role="alert">
-            ⚠️ <strong>@loadingAttemptsFailed</strong> loading attempts failed (uncleaned boxes blocked)
+            ⚠️ <strong>@metrics.LoadingAttemptsFailed</strong> loading attempts failed (uncleaned boxes blocked)
         </div>
     }
 
@@ -58,77 +74,147 @@
             <h5>Recent Events</h5>
         </div>
         <div class="card-body">
-            <p class="text-muted">Showing simulated data for prototype</p>
-            <table class="table table-sm">
-                <thead>
-                    <tr>
-                        <th>Time</th>
-                        <th>Box ID</th>
-                        <th>Event</th>
-                        <th>Worker</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>@DateTime.Now.ToString("HH:mm:ss")</td>
-                        <td>BOX-001</td>
-                        <td><span class="badge bg-success">Cleaning Completed</span></td>
-                        <td>Worker-01</td>
-                    </tr>
-                    <tr>
-                        <td>@DateTime.Now.AddMinutes(-1).ToString("HH:mm:ss")</td>
-                        <td>BOX-002</td>
-                        <td><span class="badge bg-warning">Repair Started</span></td>
-                        <td>Worker-03</td>
-                    </tr>
-                </tbody>
-            </table>
+            @if (recentEvents.Count == 0)
+            {
+                <p class="text-muted">No events yet. Use the Simulator to send events!</p>
+            }
+            else
+            {
+                <table class="table table-sm table-hover">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Box ID</th>
+                            <th>Event</th>
+                            <th>Worker</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var evt in recentEvents)
+                        {
+                            <tr>
+                                <td>@evt.Timestamp.ToLocalTime().ToString("HH:mm:ss")</td>
+                                <td><code>@evt.BoxId</code></td>
+                                <td>@GetEventBadge(evt.EventType)</td>
+                                <td>@evt.WorkerId</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
         </div>
     </div>
 
     <div class="mt-4">
         <p class="text-muted">
-            <small>Last updated: @lastUpdated.ToString("HH:mm:ss")</small>
+            <small>
+                Last updated: @metrics.LastUpdated.ToLocalTime().ToString("HH:mm:ss")
+            </small>
             <br />
-            <small>Dashboard updates every 5 seconds (polling)</small>
-            <br />
-            <small class="text-info">Note: This is a prototype. Real-time SignalR updates coming in production version.</small>
+            <small>
+                Connection status: 
+                @if (isConnected)
+                {
+                    <span class="text-success">● Connected</span>
+                }
+                else
+                {
+                    <span class="text-danger">● Disconnected</span>
+                }
+            </small>
         </p>
     </div>
 </div>
 
 @code {
-    private int boxesCleaned = 0;
-    private int boxesRepaired = 0;
-    private int boxesLoaded = 0;
-    private int boxesInProgress = 0;
-    private int loadingAttemptsFailed = 0;
-    private DateTime lastUpdated = DateTime.Now;
-    private System.Timers.Timer? updateTimer;
+    private HubConnection? hubConnection;
+    private DailyMetrics metrics = new();
+    private List<RecentEvent> recentEvents = new();
+    private bool isConnected = false;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        // Simulate updates for prototype
-        updateTimer = new System.Timers.Timer(5000); // Update every 5 seconds
-        updateTimer.Elapsed += OnTimerElapsed;
-        updateTimer.Start();
+        // Connect to SignalR hub
+        hubConnection = new HubConnectionBuilder()
+            .WithUrl(NavigationManager.ToAbsoluteUri("/hubs/dashboard"))
+            .WithAutomaticReconnect()
+            .Build();
+
+        // Handle reconnection
+        hubConnection.Reconnecting += error =>
+        {
+            isConnected = false;
+            StateHasChanged();
+            return Task.CompletedTask;
+        };
+
+        hubConnection.Reconnected += connectionId =>
+        {
+            isConnected = true;
+            StateHasChanged();
+            return Task.CompletedTask;
+        };
+
+        hubConnection.Closed += error =>
+        {
+            isConnected = false;
+            StateHasChanged();
+            return Task.CompletedTask;
+        };
+
+        // Listen for events from EventProcessor
+        hubConnection.On<BoxEvent, DailyMetrics>("ReceiveEvent", (evt, updatedMetrics) =>
+        {
+            metrics = updatedMetrics;
+            
+            // Add event to recent list
+            recentEvents.Insert(0, new RecentEvent
+            {
+                EventId = evt.EventId,
+                BoxId = evt.BoxId,
+                EventType = evt.EventType,
+                WorkerId = evt.WorkerId,
+                Timestamp = evt.Timestamp
+            });
+
+            // Keep only last 20 events
+            if (recentEvents.Count > 20)
+                recentEvents.RemoveAt(recentEvents.Count - 1);
+
+            InvokeAsync(StateHasChanged);
+        });
+
+        // Listen for metrics updates
+        hubConnection.On<DailyMetrics>("ReceiveMetrics", (updatedMetrics) =>
+        {
+            metrics = updatedMetrics;
+            InvokeAsync(StateHasChanged);
+        });
+
+        await hubConnection.StartAsync();
+        isConnected = true;
     }
 
-    private void OnTimerElapsed(object? sender, ElapsedEventArgs e)
+    private MarkupString GetEventBadge(string eventType)
     {
-        // Simulate increasing metrics
-        boxesCleaned++;
-        if (boxesCleaned % 3 == 0) boxesRepaired++;
-        if (boxesCleaned % 5 == 0) boxesLoaded++;
-        boxesInProgress = Random.Shared.Next(2, 6);
-        lastUpdated = DateTime.Now;
+        var (badgeClass, text) = eventType switch
+        {
+            nameof(BoxCleaningStarted) => ("bg-info", "Cleaning Started"),
+            nameof(BoxCleaningCompleted) => ("bg-success", "Cleaning Completed"),
+            nameof(BoxRepairStarted) => ("bg-warning", "Repair Started"),
+            nameof(BoxRepairCompleted) => ("bg-success", "Repair Completed"),
+            nameof(BoxLoadingAttempted) => ("bg-primary", "Loading Attempted"),
+            _ => ("bg-secondary", eventType)
+        };
 
-        InvokeAsync(StateHasChanged);
+        return new MarkupString($"<span class=\"badge {badgeClass}\">{text}</span>");
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
-        updateTimer?.Stop();
-        updateTimer?.Dispose();
+        if (hubConnection is not null)
+        {
+            await hubConnection.DisposeAsync();
+        }
     }
 }
