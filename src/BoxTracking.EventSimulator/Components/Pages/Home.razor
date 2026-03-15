@@ -159,7 +159,7 @@
                 Timestamp = DateTime.UtcNow
             };
 
-            var success = await EventService.SendEventAsync(evt);
+            var (success, error) = await EventService.SendEventAsync(evt);
             
             if (success)
             {
@@ -169,13 +169,13 @@
             }
             else
             {
-                statusMessage = "❌ Failed to send event";
+                statusMessage = $"❌ Failed to send event: {error}";
                 statusIsError = true;
             }
         }
         catch (Exception ex)
         {
-            statusMessage = $"❌ Error: {ex.Message}";
+            statusMessage = $"❌ Exception: {ex.Message}";
             statusIsError = true;
         }
         finally
@@ -191,14 +191,23 @@
         
         try
         {
-            var events = await EventService.SimulateBoxLifecycleAsync(lifecycleBoxId, lifecycleWorkerId);
+            var (events, errors) = await EventService.SimulateBoxLifecycleAsync(lifecycleBoxId, lifecycleWorkerId);
             sentEvents.AddRange(events);
-            statusMessage = $"✅ Simulated complete lifecycle for {lifecycleBoxId} ({events.Count} events)";
-            statusIsError = false;
+            
+            if (errors.Count == 0)
+            {
+                statusMessage = $"✅ Simulated complete lifecycle for {lifecycleBoxId} ({events.Count} events)";
+                statusIsError = false;
+            }
+            else
+            {
+                statusMessage = $"⚠️ Sent {events.Count} events with {errors.Count} errors: {string.Join(", ", errors)}";
+                statusIsError = true;
+            }
         }
         catch (Exception ex)
         {
-            statusMessage = $"❌ Error: {ex.Message}";
+            statusMessage = $"❌ Exception: {ex.Message}";
             statusIsError = true;
         }
         finally
@@ -214,14 +223,23 @@
         
         try
         {
-            var events = await EventService.GenerateAndSendBatchAsync(batchCount);
+            var (events, errors) = await EventService.GenerateAndSendBatchAsync(batchCount);
             sentEvents.AddRange(events);
-            statusMessage = $"✅ Sent {events.Count} random events";
-            statusIsError = false;
+            
+            if (errors.Count == 0)
+            {
+                statusMessage = $"✅ Sent {events.Count} random events";
+                statusIsError = false;
+            }
+            else
+            {
+                statusMessage = $"⚠️ Sent {events.Count}/{batchCount} events. Errors: {string.Join(", ", errors.Take(3))}";
+                statusIsError = true;
+            }
         }
         catch (Exception ex)
         {
-            statusMessage = $"❌ Error: {ex.Message}";
+            statusMessage = $"❌ Exception: {ex.Message}";
             statusIsError = true;
         }
         finally

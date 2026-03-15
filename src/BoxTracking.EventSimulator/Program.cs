@@ -21,6 +21,7 @@ builder.Services.AddHttpClient<EventService>(client =>
 {
     var apiUrl = builder.Configuration["BoxTrackingApi:BaseUrl"] ?? "http://localhost:5000";
     client.BaseAddress = new Uri(apiUrl);
+    Console.WriteLine($"Event Simulator configured to connect to API at: {apiUrl}");
 });
 
 var app = builder.Build();

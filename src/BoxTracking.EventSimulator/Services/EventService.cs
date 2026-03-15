@@ -13,16 +13,23 @@ public class EventService
         _httpClient = httpClient;
     }
 
-    public async Task<bool> SendEventAsync(BoxEvent boxEvent)
+    public async Task<(bool Success, string? Error)> SendEventAsync(BoxEvent boxEvent)
     {
         try
         {
             var response = await _httpClient.PostAsJsonAsync("/api/events", boxEvent);
-            return response.IsSuccessStatusCode;
+            
+            if (response.IsSuccessStatusCode)
+            {
+                return (true, null);
+            }
+            
+            var errorContent = await response.Content.ReadAsStringAsync();
+            return (false, $"API returned {response.StatusCode}: {errorContent}");
         }
-        catch
+        catch (Exception ex)
         {
-            return false;
+            return (false, $"HTTP error: {ex.Message}");
         }
     }
 
@@ -47,29 +54,36 @@ public class EventService
         };
     }
 
-    public async Task<List<BoxEvent>> GenerateAndSendBatchAsync(int count)
+    public async Task<(List<BoxEvent> Events, List<string> Errors)> GenerateAndSendBatchAsync(int count)
     {
         var events = new List<BoxEvent>();
+        var errors = new List<string>();
         
         for (int i = 0; i < count; i++)
         {
             var evt = GenerateRandomEvent();
-            var success = await SendEventAsync(evt);
+            var (success, error) = await SendEventAsync(evt);
+            
             if (success)
             {
                 events.Add(evt);
+            }
+            else if (error != null)
+            {
+                errors.Add($"{evt.BoxId}: {error}");
             }
             
             // Small delay to avoid overwhelming the API
             await Task.Delay(100);
         }
 
-        return events;
+        return (events, errors);
     }
 
-    public async Task<List<BoxEvent>> SimulateBoxLifecycleAsync(string boxId, string workerId)
+    public async Task<(List<BoxEvent> Events, List<string> Errors)> SimulateBoxLifecycleAsync(string boxId, string workerId)
     {
         var events = new List<BoxEvent>();
+        var errors = new List<string>();
         
         // 1. Cleaning Started
         var cleaningStarted = new BoxEvent
@@ -80,8 +94,9 @@ public class EventService
             EventType = "BoxCleaningStarted",
             Timestamp = DateTime.UtcNow
         };
-        await SendEventAsync(cleaningStarted);
-        events.Add(cleaningStarted);
+        var (success1, error1) = await SendEventAsync(cleaningStarted);
+        if (success1) events.Add(cleaningStarted);
+        else if (error1 != null) errors.Add(error1);
         await Task.Delay(2000);
 
         // 2. Cleaning Completed
@@ -93,8 +108,9 @@ public class EventService
             EventType = "BoxCleaningCompleted",
             Timestamp = DateTime.UtcNow
         };
-        await SendEventAsync(cleaningCompleted);
-        events.Add(cleaningCompleted);
+        var (success2, error2) = await SendEventAsync(cleaningCompleted);
+        if (success2) events.Add(cleaningCompleted);
+        else if (error2 != null) errors.Add(error2);
         await Task.Delay(1000);
 
         // 3. Loading Attempted
@@ -106,9 +122,10 @@ public class EventService
             EventType = "BoxLoadingAttempted",
             Timestamp = DateTime.UtcNow
         };
-        await SendEventAsync(loadingAttempted);
-        events.Add(loadingAttempted);
+        var (success3, error3) = await SendEventAsync(loadingAttempted);
+        if (success3) events.Add(loadingAttempted);
+        else if (error3 != null) errors.Add(error3);
 
-        return events;
+        return (events, errors);
     }
 }
