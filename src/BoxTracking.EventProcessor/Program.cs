@@ -185,7 +185,7 @@ public class EventProcessorService : BackgroundService
             arguments: null);
 
         var consumer = new EventingBasicConsumer(_channel);
-        consumer.Received += (model, ea) =>
+        consumer.Received += async (model, ea) =>
         {
             try
             {
@@ -250,20 +250,20 @@ public class EventProcessorService : BackgroundService
         await Task.Delay(Timeout.Infinite, stoppingToken);
     }
 
-    public override async ValueTask DisposeAsync()
+    public override void Dispose()
     {
         _channel?.Close();
         if (_hubConnection != null)
         {
-            await _hubConnection.DisposeAsync();
+            try
+            {
+                _hubConnection.DisposeAsync().AsTask().Wait(TimeSpan.FromSeconds(5));
+            }
+            catch
+            {
+                // Ignore disposal errors during shutdown
+            }
         }
-        await base.DisposeAsync();
-    }
-
-    public override void Dispose()
-    {
-        _channel?.Close();
-        _hubConnection?.DisposeAsync().AsTask().Wait();
         base.Dispose();
     }
 }
